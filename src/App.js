@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars */
 import { useState, useEffect, useCallback } from "react";
 
 // ─── CONFIG ──────────────────────────────────────────────────────────────────
@@ -90,4 +91,105 @@ const QB = {
     { id:"E49", s:"English", t:"Common Errors",  q:"Choose the correct sentence:",                                                                                        opts:["I look forward to hear from you","I look forward to hearing from you","I look forward hearing from you","I look forward to have heard from you"], ans:1, sol:"'Look forward to' → the 'to' is a PREPOSITION (not part of infinitive), so it takes a gerund: 'hearing'." },
     { id:"E50", s:"English", t:"Common Errors",  q:"Identify the error: 'The reason for his failure is because he did not study.'",                                      opts:["'failure' should be 'failing'","'because' should be 'that'","'study' should be 'studied'","There is no error"], ans:1, sol:"'The reason is because' is redundant. Correct: 'The reason is THAT he did not study.'" },
     { id:"E51", s:"English", t:"Common Errors",  q:"'He was asked to revert back to his original position.' The error is:",                                              opts:["'revert' should be 'return'","'back' is redundant since 'revert' already means go back","'original' is incorrect","'position' should be 'place'"], ans:1, sol:"'Revert' already means 'go back', so 'back' is redundant. Correct: 'revert to his original position'." },
-    { id:"E52", s:"English", t:"Common Errors",  q:"Choose the CORRECT sentence:",                                                                                        opts:["He is taller than I am","He is more taller than me","He is more tall than I","He is the most tallest"], ans:0, sol:"'Taller than I am'
+    { id:"E52", s:"English", t:"Common Errors",  q:"Choose the CORRECT sentence:",                                                                                        opts:["He is taller than I am","He is more taller than me","He is more tall than I","He is the most tallest"], ans:0, sol:"'Taller than I am' is correct. Avoid double comparatives ('more taller') and double superlatives ('most tallest')." },
+  ],
+};
+
+// ─── APP ─────────────────────────────────────────────────────────────────────
+export default function App() {
+  const [combo, setCombo] = useState(null);
+  const [answers, setAnswers] = useState({});
+  const [submitted, setSubmitted] = useState(false);
+  const [secs, setSecs] = useState(TOTAL_SECS);
+
+  const subjects = combo ? ["English", ...combo.sciences] : [];
+  const questions = subjects.flatMap((s) => QB[s] || []);
+
+  const submit = useCallback(() => setSubmitted(true), []);
+
+  useEffect(() => {
+    if (!combo || submitted) return;
+    if (secs <= 0) { submit(); return; }
+    const t = setTimeout(() => setSecs((s) => s - 1), 1000);
+    return () => clearTimeout(t);
+  }, [combo, submitted, secs, submit]);
+
+  if (!combo) {
+    return (
+      <div style={{ fontFamily: "system-ui, sans-serif", padding: 24, maxWidth: 720, margin: "0 auto" }}>
+        <h1>AGITA Mock CBT</h1>
+        <p>Select your subject combination to begin.</p>
+        <ul style={{ listStyle: "none", padding: 0 }}>
+          {COMBOS.map((c) => (
+            <li key={c.label} style={{ margin: "8px 0" }}>
+              <button
+                onClick={() => setCombo(c)}
+                style={{ padding: "10px 14px", width: "100%", textAlign: "left", cursor: "pointer" }}
+              >
+                {c.label}
+              </button>
+            </li>
+          ))}
+        </ul>
+      </div>
+    );
+  }
+
+  const mm = String(Math.floor(secs / 60)).padStart(2, "0");
+  const ss = String(secs % 60).padStart(2, "0");
+
+  const score = submitted
+    ? questions.reduce((n, q) => n + (answers[q.id] === q.ans ? 1 : 0), 0)
+    : 0;
+
+  return (
+    <div style={{ fontFamily: "system-ui, sans-serif", padding: 24, maxWidth: 820, margin: "0 auto" }}>
+      <header style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <h2>{combo.label}</h2>
+        <div style={{ fontVariantNumeric: "tabular-nums" }}>Time: {mm}:{ss}</div>
+      </header>
+
+      {submitted && (
+        <div style={{ padding: 12, background: "#ecfdf5", border: "1px solid #10b981", borderRadius: 8, margin: "12px 0" }}>
+          <strong>Score: {score} / {questions.length}</strong>
+        </div>
+      )}
+
+      <ol>
+        {questions.map((q) => {
+          const picked = answers[q.id];
+          return (
+            <li key={q.id} style={{ margin: "16px 0", padding: 12, border: "1px solid #e5e7eb", borderRadius: 8 }}>
+              <div style={{ fontWeight: 600, marginBottom: 8 }}>
+                [{q.s} · {q.t}] {q.q}
+              </div>
+              {q.opts.map((opt, i) => (
+                <label key={i} style={{ display: "block", margin: "4px 0" }}>
+                  <input
+                    type="radio"
+                    name={q.id}
+                    disabled={submitted}
+                    checked={picked === i}
+                    onChange={() => setAnswers((a) => ({ ...a, [q.id]: i }))}
+                  />{" "}
+                  {opt}
+                </label>
+              ))}
+              {submitted && (
+                <div style={{ marginTop: 8, fontSize: 14, color: picked === q.ans ? "#065f46" : "#991b1b" }}>
+                  {picked === q.ans ? "Correct." : `Correct answer: ${q.opts[q.ans]}.`} {q.sol}
+                </div>
+              )}
+            </li>
+          );
+        })}
+      </ol>
+
+      {!submitted && (
+        <button onClick={submit} style={{ padding: "10px 16px", cursor: "pointer" }}>
+          Submit
+        </button>
+      )}
+    </div>
+  );
+}
